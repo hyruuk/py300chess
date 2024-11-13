@@ -2,13 +2,17 @@
 
 import time
 import numpy as np
-from pylsl import StreamInfo, StreamOutlet
+from pylsl import StreamInfo, StreamOutlet, local_clock
 
 # Number of EEG channels
 n_channels = 19
 
 # Sampling rate in Hz
 sampling_rate = 250
+sampling_interval = 1.0 / sampling_rate
+
+# Chunk size (number of samples per chunk)
+chunk_size = 25  # Adjust as needed
 
 # Create StreamInfo object
 info = StreamInfo(
@@ -20,7 +24,7 @@ info = StreamInfo(
     source_id='fake_eeg_stream'
 )
 
-# Add channel labels (optional but helpful)
+# Add channel labels
 chns = info.desc().append_child("channels")
 for c in range(n_channels):
     ch = chns.append_child("channel")
@@ -29,22 +33,21 @@ for c in range(n_channels):
     ch.append_child_value("type", "EEG")
 
 # Create the outlet
-outlet = StreamOutlet(info)
+outlet = StreamOutlet(info, chunk_size)
 
 print("Now streaming fake EEG data...")
 
 # Start streaming data
-start_time = time.time()
 while True:
-    # Generate a random sample for each channel
-    sample = np.random.randn(n_channels).tolist()
+    # Generate a chunk of data
+    chunk = []
+    timestamps = []
+    for i in range(chunk_size):
+        sample = np.random.randn(n_channels).tolist()
+        timestamp = local_clock()
+        chunk.append(sample)
+        timestamps.append(timestamp)
+        time.sleep(sampling_interval)
 
-    # Alternatively, simulate a sinusoidal signal for testing
-    # t = time.time() - start_time
-    # sample = (np.sin(2 * np.pi * 10 * t) * 10).tolist()
-
-    # Push the sample to the outlet
-    outlet.push_sample(sample)
-
-    # Sleep to mimic the sampling rate
-    time.sleep(1.0 / sampling_rate)
+    # Push the chunk to the outlet
+    outlet.push_chunk(chunk, timestamps)

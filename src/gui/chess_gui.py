@@ -9,6 +9,8 @@ import chess
 import random
 from pylsl import StreamInfo, StreamOutlet
 import os
+import pylsl
+
 
 class ChessBoardWidget(QWidget):
     # Signal to receive selected square
@@ -167,8 +169,10 @@ class ChessBoardWidget(QWidget):
                 self.current_flash_index = 0
 
     def send_marker(self, group_index):
-        # Send the group index as a marker
-        self.marker_outlet.push_sample([int(group_index)])
+        # Get the current time according to LSL
+        timestamp = pylsl.local_clock()
+        # Send the group index as a marker with the timestamp
+        self.marker_outlet.push_sample([int(group_index)], timestamp=timestamp)
 
     def handle_square_selection(self, row, col):
         # Highlight the selected square or make the move

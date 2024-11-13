@@ -7,6 +7,8 @@ from collections import deque
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
+import pylsl
+import time
 
 class EEGDataAcquisition(QThread):
     # Signal to emit the selected square (row, column)
@@ -35,9 +37,12 @@ class EEGDataAcquisition(QThread):
         self.num_channels = self.eeg_inlet.info().channel_count()
 
         # Parameters for epoch extraction
-        self.pre_time = 0.2   # 200 ms before marker
-        self.post_time = 0.8  # 800 ms after marker
+        self.pre_time = 0.1   # Reduce to 100 ms before marker
+        self.post_time = 0.8  # Keep post time at 800 ms
         self.epoch_length = int((self.pre_time + self.post_time) * self.fs)
+
+        self.eeg_time_correction = self.eeg_inlet.time_correction()
+        self.marker_time_correction = self.marker_inlet.time_correction()
 
         # Storage for epochs and labels
         self.epochs = []
@@ -55,29 +60,57 @@ class EEGDataAcquisition(QThread):
 
         self.gui_widget = gui_widget
 
+        self.fs = self.eeg_inlet.info().nominal_srate()
+        if self.fs == 0:
+            self.fs = 256  # Set a default value if nominal_srate is zero
+        self.fs = int(self.fs)
+
+        self.epoch_length = int((self.pre_time + self.post_time) * self.fs)
+
+        self.eeg_time_correction = self.eeg_inlet.time_correction()
+        self.marker_time_correction = self.marker_inlet.time_correction()
+        print(f"EEG time correction: {self.eeg_time_correction}")
+        print(f"Marker time correction: {self.marker_time_correction}")
+
     def set_confidence_threshold(self, threshold):
         self.confidence_threshold = threshold
         print(f"Confidence threshold set to: {self.confidence_threshold}")
 
     def run(self):
         print("Starting data acquisition...")
+        loop_interval = 0.01  # Loop interval in seconds (10 ms)
+        next_loop_time = time.perf_counter()
+
         while True:
-            # Pull EEG samples
-            eeg_sample, eeg_timestamp = self.eeg_inlet.pull_sample(timeout=0.0)
-            if eeg_sample is not None:
-                self.eeg_buffer.append((eeg_timestamp, eeg_sample))
+            # Pull all available EEG samples
+            while True:
+                eeg_sample, eeg_timestamp = self.eeg_inlet.pull_sample(timeout=0.0)
+                if eeg_sample is None:
+                    break
+                adjusted_eeg_timestamp = eeg_timestamp + self.eeg_time_correction
+                self.eeg_buffer.append((adjusted_eeg_timestamp, eeg_sample))
                 # Keep buffer size reasonable
                 while (self.eeg_buffer[-1][0] - self.eeg_buffer[0][0]) > 10:  # Keep last 10 seconds
                     self.eeg_buffer.popleft()
+                # Debugging info
+                local_time = pylsl.local_clock()
+                time_diff = local_time - adjusted_eeg_timestamp
+                print(f"EEG timestamp: {adjusted_eeg_timestamp}, Local clock: {local_time}, Difference: {time_diff}")
 
-            # Pull markers
-            marker_sample, marker_timestamp = self.marker_inlet.pull_sample(timeout=0.0)
-            if marker_sample is not None:
+            # Pull all available markers
+            while True:
+                marker_sample, marker_timestamp = self.marker_inlet.pull_sample(timeout=0.0)
+                if marker_sample is None:
+                    break
+                adjusted_marker_timestamp = marker_timestamp + self.marker_time_correction
                 group_index = int(marker_sample[0])
-                self.marker_queue.append((marker_timestamp, group_index))
-                print(f"Received marker for group {group_index} at time {marker_timestamp}")
+                self.marker_queue.append((adjusted_marker_timestamp, group_index))
+                # Debugging info
+                local_time = pylsl.local_clock()
+                time_diff = local_time - adjusted_marker_timestamp
+                print(f"Marker timestamp: {adjusted_marker_timestamp}, Local clock: {local_time}, Difference: {time_diff}")
 
-            # Check for new markers and segment data
+            # Process any markers in the queue
             while self.marker_queue:
                 marker_timestamp, group_index = self.marker_queue.popleft()
                 print(f"Processing marker for group {group_index} at time {marker_timestamp}")
@@ -86,7 +119,7 @@ class EEGDataAcquisition(QThread):
                 epoch = self.get_eeg_epoch(marker_timestamp)
                 if epoch is not None:
                     # Label the epoch (1 for target, 0 for non-target)
-                    label = self.is_target_group(group_index)
+                    label = 1 if self.is_target_group(group_index) else 0
 
                     # Store the epoch and label
                     self.epochs.append(epoch)
@@ -96,25 +129,45 @@ class EEGDataAcquisition(QThread):
                     # After required cycles, perform classification
                     if len(self.labels) >= self.required_cycles * 16:
                         self.classify_and_reset()
+                else:
+                    print("Not enough EEG data for epoch.")
 
-            # Sleep briefly
-            time.sleep(0.01)
+            # Calculate next loop time and sleep
+            next_loop_time += loop_interval
+            sleep_time = next_loop_time - time.perf_counter()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                # We're behind schedule; adjust next_loop_time
+                next_loop_time = time.perf_counter()
+
+
 
     def get_eeg_epoch(self, marker_time):
         # Calculate start and end times
         start_time = marker_time - self.pre_time
         end_time = marker_time + self.post_time
 
+        # Log the time window we're trying to extract
+        print(f"Attempting to extract EEG epoch from {start_time} to {end_time}")
+
         # Extract EEG data within the time window
         samples = [sample for timestamp, sample in self.eeg_buffer if start_time <= timestamp <= end_time]
 
         if len(samples) < self.epoch_length:
-            print("Not enough EEG data for epoch.")
+            print(f"Not enough EEG data for epoch. Samples found: {len(samples)}, Expected: {self.epoch_length}")
+            if self.eeg_buffer:
+                buffer_start = self.eeg_buffer[0][0]
+                buffer_end = self.eeg_buffer[-1][0]
+                print(f"EEG buffer time range: {buffer_start} to {buffer_end}")
+            else:
+                print("EEG buffer is empty.")
             return None
 
         # Convert to numpy array
         epoch_array = np.array(samples)
         return epoch_array
+
 
     def is_target_group(self, group_index):
         # Define the target row and column indices

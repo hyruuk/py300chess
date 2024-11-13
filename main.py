@@ -14,19 +14,20 @@ def main():
     window.resize(800, 800)
     window.show()
 
-    # Start flashing after the window is shown
-    chessboard.start_flashing()
-
     # Create EEG data acquisition thread
     eeg_thread = EEGDataAcquisition(chessboard)
 
     # Connect signals
     eeg_thread.square_selected_signal.connect(chessboard.handle_square_selection)
 
-    # Start the EEG thread
+    # Start the EEG thread before flashing
     eeg_thread.start()
 
+    # Start flashing after the EEG thread is running
+    chessboard.start_flashing()
+
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     main()
