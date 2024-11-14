@@ -47,6 +47,7 @@ cd p300chess
 ```
 
 2. **Create a Virtual Environment (Optional but Recommended)**
+
 Install mamba through [Miniforge](https://github.com/conda-forge/miniforge) (recommended)
 
 ```
@@ -111,17 +112,6 @@ python main.py
 
   - Ensure that your EEG device or the fake EEG data generator is running.
   - Verify that the EEG data stream is correctly named and of type `'EEG'` in LSL.
-
-- **Insufficient Epoch Samples**
-
-  - Make sure that the EEG data acquisition thread starts before the flashing sequence.
-  - Verify that there is sufficient delay between starting data acquisition and generating markers to allow the buffer to fill.
-  - Check time synchronization between EEG data and markers.
-
-- **Timing Drift Issues**
-
-  - Ensure that the `run` method in `EEGDataAcquisition` uses precise loop timing with `time.perf_counter()`.
-  - Avoid arbitrary `time.sleep()` calls in the data acquisition loop.
 
 ## TODOs
 
