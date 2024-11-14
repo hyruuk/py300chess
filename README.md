@@ -42,22 +42,28 @@ The P300-Based BCI Chess Application enables users to interact with a chess game
 1. **Clone the Repository**
 
 ```
-git clone https://github.com/yourusername/p300-bci-chess.git
-cd p300-bci-chess
+git clone https://github.com/yourusername/p300chess.git
+cd p300chess
 ```
 
 2. **Create a Virtual Environment (Optional but Recommended)**
+Install mamba through [Miniforge](https://github.com/conda-forge/miniforge) (recommended)
 
-   [CODE BLOCK: CREATE AND ACTIVATE VIRTUAL ENVIRONMENT]
+```
+mamba create -n p300chess
+mamba activate p300chess
+```
 
 3. **Install Required Packages**
 
-   [CODE BLOCK: INSTALL REQUIRED PACKAGES]
+```
+pip install -r requirements.txt
+```
 
 4. **Install Lab Streaming Layer (LSL)**
-
-   - Download the LSL distribution from the [official repository](https://github.com/sccn/labstreaminglayer).
-   - Follow the installation instructions for your operating system.
+```
+pip install pylsl
+```
 
 ## Usage
 
@@ -70,11 +76,18 @@ cd p300-bci-chess
 - **Using the Fake EEG Data Generator**
 
   - Open a new terminal window.
-  - [CODE BLOCK: RUN FAKE EEG STREAM GENERATOR]
-
+```
+mamba activate p300chess
+cd p300chess
+python src/eeg/EEGsimulate.py
+```
 ### 2. Run the Application
-
-[CODE BLOCK: RUN MAIN APPLICATION]
+- Open a new terminal window
+```
+mamba activate p300chess
+cd p300chess
+python main.py
+```
 
 ### 3. Interact with the Application
 
@@ -118,11 +131,21 @@ cd p300-bci-chess
   - Ensure the EEG data acquisition starts early enough before markers are received.
   - Verify correct application of time corrections and synchronization between EEG data and markers.
 
+- [ ] **Implement calibration phase**
+
+  - Starts the application by acquiring some calibration (training data)
+  - Train the model
+
 - [ ] **Implement P300 Detection and Classification**
 
   - Finalize the signal processing pipeline for P300 detection.
   - Train and test the machine learning classifier with collected data.
   - Optimize feature extraction and classification parameters.
+
+- [ ] **Constrain model predictions by possible moves**
+
+  - Only predict between possible pieces and moves
+  - Only flash rows and columns that contains pieces that can move, and positions to which they can move too (OPTIONNAL - MIGHT NOT BE DESIRED FOR NEUROCHESS STUDIES)
 
 - [ ] **Enhance User Interface**
 
@@ -153,11 +176,6 @@ cd p300-bci-chess
 
   - Expand the README with detailed usage examples.
   - Document each module and function within the code.
-
-- [ ] **License and Contribution Guidelines**
-
-  - Decide on a license for the project (e.g., MIT, GPL).
-  - Add a `CONTRIBUTING.md` file to guide future contributors.
 
 ## License
 
