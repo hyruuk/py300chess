@@ -1,4 +1,4 @@
-# receive_eeg_data.py
+# print_eeg_data.py
 
 from pylsl import StreamInlet, resolve_byprop
 
