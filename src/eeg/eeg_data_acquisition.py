@@ -95,7 +95,7 @@ class EEGDataAcquisition(QThread):
                 # Debugging info
                 local_time = pylsl.local_clock()
                 time_diff = local_time - adjusted_eeg_timestamp
-                print(f"EEG timestamp: {adjusted_eeg_timestamp}, Local clock: {local_time}, Difference: {time_diff}")
+                #print(f"EEG timestamp: {adjusted_eeg_timestamp}, Local clock: {local_time}, Difference: {time_diff}")
 
             # Pull all available markers
             while True:
@@ -114,7 +114,7 @@ class EEGDataAcquisition(QThread):
             while self.marker_queue:
                 marker_timestamp, group_index = self.marker_queue.popleft()
                 print(f"Processing marker for group {group_index} at time {marker_timestamp}")
-
+                print(f'Local time is {pylsl.local_clock()}')
                 # Segment EEG data around the marker
                 epoch = self.get_eeg_epoch(marker_timestamp)
                 if epoch is not None:

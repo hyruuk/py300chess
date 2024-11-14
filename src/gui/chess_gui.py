@@ -11,7 +11,6 @@ from pylsl import StreamInfo, StreamOutlet
 import os
 import pylsl
 
-
 class ChessBoardWidget(QWidget):
     # Signal to receive selected square
     square_selected = pyqtSignal(int, int)
