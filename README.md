@@ -41,7 +41,10 @@ The P300-Based BCI Chess Application enables users to interact with a chess game
 
 1. **Clone the Repository**
 
-   [CODE BLOCK: CLONE AND NAVIGATE TO REPOSITORY]
+```
+git clone https://github.com/yourusername/p300-bci-chess.git
+cd p300-bci-chess
+```
 
 2. **Create a Virtual Environment (Optional but Recommended)**
 
