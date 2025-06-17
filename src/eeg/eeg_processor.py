@@ -1,5 +1,3 @@
-# eeg_data_acquisition.py
-
 from pylsl import StreamInlet, resolve_byprop
 import numpy as np
 import time

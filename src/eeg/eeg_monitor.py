@@ -1,5 +1,3 @@
-# print_eeg_data.py
-
 from pylsl import StreamInlet, resolve_byprop
 
 # Resolve the EEG stream

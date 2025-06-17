@@ -1,5 +1,3 @@
-# fake_eeg_stream.py
-
 import time
 import numpy as np
 from pylsl import StreamInfo, StreamOutlet, local_clock
