@@ -18,6 +18,7 @@ This application uses the P300 speller approach adapted for chess:
 - **Visual feedback**: Real-time confidence indicators and system status
 - **Simulation mode**: Test without EEG hardware using simulated signals
 - **Flexible EEG setup**: Support for single or multi-channel configurations
+- **Modular architecture**: Independent components that can be mixed and matched
 
 ## Requirements
 
@@ -40,125 +41,257 @@ pip install -r requirements.txt
 
 3. Run the application:
 ```bash
-python src/main.py
+python main.py
 ```
+
+## Quick Start
+
+### Using Simulated EEG (No Hardware Required)
+
+1. **Start the simulated EEG streamer:**
+```bash
+cd src/eeg_processing
+python signal_simulator.py
+```
+
+2. **Test P300 responses manually:**
+```bash
+# In another terminal - set target square:
+python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessTarget','Markers',1,pylsl.IRREGULAR_RATE,pylsl.cf_string)); outlet.push_sample(['set_target|square=e4'])"
+
+# Flash the target square (should generate P300):
+python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessFlash','Markers',1,pylsl.IRREGULAR_RATE,pylsl.cf_string)); outlet.push_sample(['square_flash|square=e4'])"
+```
+
+3. **For clean EEG without P300 responses:**
+```bash
+python signal_simulator.py --standalone --no-p300
+```
+
+### Using Real EEG Hardware
+
+1. **Connect your EEG device** and ensure it's streaming via LSL
+
+2. **Start the real EEG handler:**
+```bash
+cd src/eeg_processing
+python lsl_stream.py
+```
+
+3. **The system will discover and connect** to available EEG devices automatically
 
 ## Configuration
 
-Key parameters can be adjusted in `config/settings.py`:
+The system is configured via `config.yaml`. Key parameters:
 
-- `SAMPLING_RATE`: EEG sampling frequency (default: 250Hz)
-- `N_CHANNELS`: Number of EEG channels (default: 1)
-- `FLASH_DURATION`: Square flash duration (default: 100ms)
-- `INTER_FLASH_INTERVAL`: Pause between flashes
-- `P300_WINDOW`: Time window for P300 detection
+### EEG Settings
+```yaml
+eeg:
+  sampling_rate: 250        # EEG sampling frequency (Hz)
+  n_channels: 1            # Number of EEG channels
+  channel_names: ["Cz"]    # Electrode positions
+  use_simulation: true     # Use simulated data vs real EEG
+```
 
-## Usage
+### P300 Detection
+```yaml
+p300:
+  detection_window: [250, 500]  # P300 detection window (ms)
+  baseline_window: [-200, 0]   # Baseline correction window (ms)
+  detection_threshold: 2.0     # Amplitude threshold (μV)
+  min_confidence: 0.6          # Minimum confidence for move execution
+```
 
-### Simulation Mode (Default)
-The application starts in simulation mode, generating mock EEG data with realistic P300 responses.
-
-### Real EEG Mode
-Connect your EEG device and ensure it's streaming via LSL, then set `USE_SIMULATION = False` in settings.
-
-### Playing Chess
-1. The board displays with legal moves available
-2. Squares flash in random order (100ms each)
-3. Focus on your intended piece when it flashes
-4. After piece selection, focus on your intended destination
-5. The move executes automatically after detection
-6. AI opponent responds with its move
+### Stimulus Presentation
+```yaml
+stimulus:
+  flash_duration: 100          # Square flash duration (ms)
+  inter_flash_interval: 200    # Pause between flashes (ms)
+  flash_repetitions: 3         # Number of flashes per square
+```
 
 ## System Architecture
 
-- **Chess Logic**: Handles game state, move validation, and AI opponent
-- **EEG Processing**: Real-time signal processing and P300 detection
-- **P300 Interface**: Manages flashing sequences and response detection
-- **GUI**: Visual chess board and feedback displays
+The system uses a **modular, LSL-based architecture** with independent components:
 
-## Development
+### Core Components
 
-See `DEV_NOTES.md` for detailed development information and architecture notes.
+- **`signal_simulator.py`**: Generates realistic EEG with P300 responses
+- **`lsl_stream.py`**: Handles real EEG hardware connections  
+- **`p300_detector.py`**: Detects P300 responses in EEG streams *(TODO)*
+- **`chess_engine.py`**: Chess AI and game logic *(TODO)*
+- **`chess_gui.py`**: Visual chess board and square flashing *(TODO)*
 
-## Future Enhancements
+### LSL Data Flow
 
-- Multi-player support
-- Advanced chess engines
-- Improved P300 detection algorithms
-- Calibration routines for individual users
-- Support for additional EEG systems
+```
+Chess Engine → ChessTarget → LSL → Signal Simulator
+Chess GUI → ChessFlash → LSL → Signal Simulator
+Signal Simulator → SimulatedEEG → LSL → P300 Detector
+Real EEG → lsl_stream.py → ProcessedEEG → LSL → P300 Detector
+P300 Detector → P300Response → LSL → Chess System
+```
 
-# EEG Chess P300 Project Structure
+### Modular Usage
 
-Create the following directory structure:
+**For Testing:** `signal_simulator.py` + P300 detector  
+**For Real BCI:** `lsl_stream.py` + P300 detector  
+**For Development:** Mix and match components as needed  
+
+## Development Status
+
+### ✅ **Completed**
+- **EEG Signal Simulation**: Realistic brain signals with P300 responses
+- **LSL Streaming**: Continuous data streaming for both real and simulated EEG
+- **Configuration System**: Comprehensive YAML-based configuration
+- **Modular Architecture**: Independent components communicating via LSL
+
+### 🔧 **In Progress**
+- **P300 Detection**: Algorithm to detect P300 responses in EEG data
+- **Chess Engine**: AI opponent and game logic
+- **Chess GUI**: Visual board with square flashing interface
+
+### 📋 **Planned**
+- **Complete Integration**: Full P300-controlled chess gameplay
+- **Calibration System**: User-specific P300 detection tuning
+- **Performance Analysis**: BCI accuracy and timing metrics
+- **Multi-player Support**: P300 vs P300 chess matches
+
+## Usage Examples
+
+### Standalone EEG Streaming
+```bash
+# Clean EEG signals without chess integration
+python signal_simulator.py --standalone
+
+# EEG with verbose output
+python signal_simulator.py --standalone --verbose
+
+# Pure background EEG (no P300 responses)
+python signal_simulator.py --standalone --no-p300
+```
+
+### Real EEG Device Discovery
+```bash
+# Scan for and test EEG hardware
+python lsl_stream.py
+```
+
+### Manual Testing
+```bash
+# Start simulator
+python signal_simulator.py
+
+# Set target and test P300 generation
+python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessTarget','Markers',1,pylsl.IRREGULAR_RATE,pylsl.cf_string)); outlet.push_sample(['set_target|square=e4'])"
+python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessFlash','Markers',1,pylsl.IRREGULAR_RATE,pylsl.cf_string)); outlet.push_sample(['square_flash|square=e4'])"
+```
+
+## Project Structure
 
 ```
 py300chess/
-├── README.md
-├── DEV_NOTES.md
-├── requirements.txt
-├── config/
-│   ├── __init__.py
-│   └── settings.py
+├── README.md                    # This file
+├── DEV_NOTES.md                # Development documentation
+├── logbook.md                  # Development progress log
+├── config.yaml                 # Main configuration file
+├── requirements.txt            # Python dependencies
+├── main.py                     # Main application entry point
 ├── src/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── chess_game/
-│   │   ├── __init__.py
-│   │   ├── chess_engine.py
-│   │   ├── chess_board.py
-│   │   └── move_validator.py
 │   ├── eeg_processing/
-│   │   ├── __init__.py
-│   │   ├── lsl_stream.py
-│   │   ├── signal_simulator.py
-│   │   ├── epoch_extractor.py
-│   │   └── p300_detector.py
+│   │   ├── signal_simulator.py    # ✅ Simulated EEG with P300
+│   │   ├── lsl_stream.py          # ✅ Real EEG hardware interface
+│   │   ├── p300_detector.py       # 🔧 P300 detection algorithms
+│   │   └── epoch_extractor.py     # 🔧 EEG epoch extraction
+│   ├── chess_game/
+│   │   ├── chess_engine.py        # 🔧 Chess AI and game logic
+│   │   ├── chess_board.py         # 🔧 Board representation
+│   │   └── move_validator.py      # 🔧 Move validation
 │   ├── gui/
-│   │   ├── __init__.py
-│   │   ├── chess_gui.py
-│   │   ├── p300_interface.py
-│   │   └── feedback_display.py
+│   │   ├── chess_gui.py           # 🔧 Visual chess board
+│   │   ├── p300_interface.py      # 🔧 Square flashing interface
+│   │   └── feedback_display.py    # 🔧 Real-time feedback
 │   └── utils/
-│       ├── __init__.py
-│       ├── logger.py
-│       └── helpers.py
+│       ├── logger.py              # 🔧 Logging system
+│       └── helpers.py             # 🔧 Utility functions
+├── config/
+│   └── config_loader.py           # ✅ Configuration management
 ├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── models/
-├── tests/
-│   ├── __init__.py
-│   ├── test_chess.py
-│   ├── test_eeg.py
-│   └── test_p300.py
-└── docs/
-    ├── architecture.md
-    └── p300_protocol.md
+│   ├── raw/                       # Raw EEG recordings
+│   ├── processed/                 # Processed data
+│   └── models/                    # Trained models
+└── tests/                         # Unit tests
 ```
 
-## Key Files Overview
+## Contributing
 
-### Core Application
-- `src/main.py` - Main application entry point
-- `config/settings.py` - Configuration parameters (sampling rate, channels, timing)
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature-name`
+3. **Make your changes** following the existing code style
+4. **Add tests** for new functionality
+5. **Submit a pull request**
 
-### Chess Module
-- `chess_engine.py` - Chess logic and AI opponent
-- `chess_board.py` - Board state management
-- `move_validator.py` - Legal move validation
+## Development Workflow
 
-### EEG Processing Module
-- `lsl_stream.py` - LSL stream handling (real and simulated)
-- `signal_simulator.py` - Mock EEG data with P300 simulation
-- `epoch_extractor.py` - Extract epochs based on flash markers
-- `p300_detector.py` - P300 detection and confidence calculation
+### Phase 1: Core Infrastructure ✅
+- [x] EEG signal simulation with P300 responses
+- [x] LSL streaming for real and simulated data
+- [x] Configuration system and project structure
+- [x] Modular architecture design
 
-### GUI Module
-- `chess_gui.py` - Chess board visualization
-- `p300_interface.py` - P300 flashing interface
-- `feedback_display.py` - Confidence and status display
+### Phase 2: P300 Processing 🔧
+- [ ] P300 detection algorithms
+- [ ] Real-time signal processing
+- [ ] Confidence metrics and validation
+- [ ] Performance optimization
 
-### Supporting
-- `utils/logger.py` - Logging system
-- `utils/helpers.py` - Common utility functions
+### Phase 3: Chess Integration 📋
+- [ ] Chess engine and game logic
+- [ ] Visual interface with square flashing
+- [ ] Move selection and validation
+- [ ] Complete P300-to-chess pipeline
+
+### Phase 4: Enhancement 📋
+- [ ] User calibration routines
+- [ ] Performance monitoring
+- [ ] Multi-player capabilities
+- [ ] Advanced analytics
+
+## Troubleshooting
+
+### EEG Streaming Issues
+- **No EEG data**: Check LSL connections and device status
+- **High latency**: Reduce chunk size in configuration
+- **Connection errors**: Verify device is streaming via LSL
+
+### P300 Detection Problems
+- **Low accuracy**: Adjust detection thresholds in config
+- **No responses**: Check electrode placement and signal quality
+- **False positives**: Increase minimum confidence threshold
+
+### Performance Issues
+- **Memory usage**: Monitor for data buffer overflow
+- **CPU usage**: Optimize real-time processing chunks
+- **Network issues**: Check LSL stream networking
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Future Enhancements
+
+- **Multiple EEG Systems**: Support for various EEG devices (Muse, OpenBCI, DSI)
+- **Advanced P300 Detection**: Machine learning-based classification
+- **Online Learning**: Adaptive algorithms that improve with use
+- **Tournament Mode**: Competitive P300 chess gameplay
+- **Research Tools**: Data collection and analysis for BCI research
+
+## Acknowledgments
+
+- **Lab Streaming Layer (LSL)**: Real-time data streaming
+- **python-chess**: Chess game logic and validation
+- **NumPy/SciPy**: Signal processing and mathematics
+- **PyGame**: GUI and visualization
+
+For detailed development information, see [DEV_NOTES.md](DEV_NOTES.md).  
+For daily progress updates, see [logbook.md](logbook.md).

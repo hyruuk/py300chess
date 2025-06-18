@@ -137,4 +137,19 @@ simulation:
 # Data Recording (optional)
 recording:
   # Enable data recording for analysis
-  enable_record
+  enable_recording: false
+  
+  # Directory to save recorded data
+  data_directory: "data/raw"
+  
+  # File format for recorded data ("csv", "hdf5", "mat")
+  file_format: "csv"
+  
+  # Record raw EEG stream
+  record_raw_eeg: true
+  
+  # Record extracted epochs
+  record_epochs: true
+  
+  # Record game events (moves, flashes, etc.)
+  record_game_events: true
