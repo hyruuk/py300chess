@@ -1,6 +1,7 @@
+# py300chess requirements
 pylsl
-scikit-learn
-pyqt5
 python-chess
 numpy
 scipy
+pygame
+pyyaml

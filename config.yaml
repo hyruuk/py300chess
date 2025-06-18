@@ -1,0 +1,155 @@
+# py300chess Configuration File
+
+# EEG System Configuration
+eeg:
+  # Sampling rate in Hz (250, 500, 1000 are common)
+  sampling_rate: 250
+  
+  # Number of EEG channels (1 for single channel, more for multi-channel averaging)
+  n_channels: 1
+  
+  # Channel names (electrode positions)
+  channel_names: ["Cz"]
+  
+  # Use simulation mode (true) or real EEG stream (false)
+  use_simulation: true
+  
+  # LSL stream name to connect to (ignored if use_simulation is true)
+  stream_name: "EEG_Stream"
+
+# P300 Detection Parameters
+p300:
+  # Time window for P300 detection in milliseconds (after stimulus)
+  detection_window: [250, 500]
+  
+  # Baseline correction window in milliseconds (before stimulus)
+  baseline_window: [-200, 0]
+  
+  # Total epoch length in milliseconds (centered around stimulus)
+  epoch_length: 800
+  
+  # Bandpass filter settings [low_freq, high_freq] in Hz
+  bandpass_filter: [0.5, 30.0]
+  
+  # P300 detection threshold (amplitude in microvolts)
+  detection_threshold: 2.0
+  
+  # Minimum confidence required for move execution (0.0 to 1.0)
+  min_confidence: 0.6
+  
+  # Apply notch filter for line noise (50Hz or 60Hz, set to null to disable)
+  notch_filter: 50
+
+# Stimulus Presentation (Flashing) Parameters
+stimulus:
+  # Duration of each flash in milliseconds
+  flash_duration: 100
+  
+  # Interval between flashes in milliseconds
+  inter_flash_interval: 200
+  
+  # Pause between piece selection and destination selection in milliseconds
+  selection_pause: 1000
+  
+  # Number of times to flash each possible square before making decision
+  flash_repetitions: 3
+  
+  # Flash colors (background, flash_color)
+  flash_colors:
+    normal: "#8B4513"      # Brown for normal squares
+    highlight: "#FFD700"   # Gold for highlighted squares
+    flash: "#FF0000"       # Red for flashing
+    selected: "#00FF00"    # Green for selected square
+
+# Chess Engine Configuration
+chess:
+  # Engine strength/difficulty (1-10, where 10 is strongest)
+  engine_strength: 3
+  
+  # Time limit per move in seconds (for AI)
+  time_limit: 2.0
+  
+  # Enable/disable various chess features
+  enable_castling: true
+  enable_en_passant: true
+  enable_promotion: true
+  
+  # Starting position (use "startpos" for standard game, or FEN string)
+  starting_position: "startpos"
+
+# GUI Configuration
+gui:
+  # Window size in pixels [width, height]
+  window_size: [800, 600]
+  
+  # Chess board size in pixels
+  board_size: 480
+  
+  # Piece style ("default", "classic", "modern")
+  piece_style: "default"
+  
+  # Show confidence indicators
+  show_confidence: true
+  
+  # Update frequency for real-time displays (Hz)
+  display_update_rate: 30
+  
+  # Font size for text displays
+  font_size: 12
+
+# Feedback and Monitoring
+feedback:
+  # How long to display confidence feedback after each flash (ms)
+  confidence_display_time: 500
+  
+  # Print debug information to console
+  debug_mode: true
+  
+  # Log level (DEBUG, INFO, WARNING, ERROR)
+  log_level: "INFO"
+  
+  # Enable real-time signal plotting (may affect performance)
+  enable_signal_plots: false
+
+# Simulation Parameters (only used when use_simulation is true)
+simulation:
+  # Background EEG noise amplitude (microvolts RMS)
+  noise_amplitude: 10.0
+  
+  # P300 response amplitude (microvolts)
+  p300_amplitude: 5.0
+  
+  # P300 latency (milliseconds after stimulus)
+  p300_latency: 300
+  
+  # P300 width (milliseconds)
+  p300_width: 100
+  
+  # Probability of generating P300 response for target stimuli (0.0 to 1.0)
+  p300_probability: 0.8
+  
+  # Add realistic artifacts (eye blinks, muscle activity)
+  add_artifacts: true
+  
+  # Artifact probability per second
+  artifact_rate: 0.1
+
+# Data Recording (optional)
+recording:
+  # Enable data recording for analysis
+  enable_recording: false
+  
+  # Directory to save recorded data
+  data_directory: "data/raw"
+  
+  # File format for recorded data ("csv", "hdf5", "mat")
+  file_format: "csv"
+  
+  # Record raw EEG stream
+  record_raw_eeg: true
+  
+  # Record extracted epochs
+  record_epochs: true
+  
+  # Record game events (moves, flashes, etc.)
+  record_game_events: true
