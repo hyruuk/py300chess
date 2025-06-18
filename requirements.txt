@@ -1,0 +1,7 @@
+# py300chess requirements
+pylsl
+python-chess
+numpy
+scipy
+pygame
+pyyaml
