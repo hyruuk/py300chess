@@ -2,7 +2,7 @@
 
 ## Project Architecture Overview
 
-This project implements a P300-based Brain-Computer Interface (BCI) for playing chess with **professional system orchestration**. The P300 is an event-related potential (ERP) that occurs ~300ms after a rare or significant stimulus.
+This project implements a P300-based Brain-Computer Interface (BCI) for playing chess. The P300 is an event-related potential (ERP) that occurs ~300ms after a rare or significant stimulus.
 
 ### Core Concept
 - Flash legal chess squares in random order
@@ -13,9 +13,9 @@ This project implements a P300-based Brain-Computer Interface (BCI) for playing 
 
 ## Technical Implementation
 
-### 1. **System Orchestrator Architecture (NEW)**
+### 1. **Main Application Architecture**
 
-The system now uses a **professional orchestrator** (`main.py`) that manages all components with two distinct operating modes:
+The main.py file provides comprehensive component management with two distinct operating modes:
 
 #### **Single Terminal Mode (Default)**
 ```
@@ -49,13 +49,13 @@ The system now uses a **professional orchestrator** (`main.py`) that manages all
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### 2. **Enhanced LSL-Based Architecture**
+### 2. **LSL-Based Architecture**
 
-The modular LSL architecture now includes **orchestration layer**:
+The modular LSL architecture includes proper component management:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    System Orchestrator                     │
+│                      Main Application                      │
 │                        (main.py)                           │
 │                                                             │
 │  ✅ Component Lifecycle Management                         │
@@ -89,9 +89,9 @@ The modular LSL architecture now includes **orchestration layer**:
                          └────────────────┘
 ```
 
-### 3. **Professional Component Management**
+### 3. **Component Management Features**
 
-#### **Orchestrator Features**
+#### **Main Application Features**
 - **Intelligent Startup**: Components start in correct dependency order
 - **Health Monitoring**: Real-time status tracking with `status` command
 - **Graceful Shutdown**: Clean termination of all components on Ctrl+C
@@ -107,9 +107,9 @@ The modular LSL architecture now includes **orchestration layer**:
 
 ## Key Components (Current Implementation Status)
 
-### ✅ **System Orchestrator (`main.py`) - COMPLETED**
+### ✅ **Main Application (`main.py`) - COMPLETED**
 
-#### **Professional Features**
+#### **Key Features**
 - **Multi-Mode Operation**: `full`, `eeg_only`, `simulation`, `hardware`, `chess_only`
 - **Interactive CLI**: Built-in commands for system management
 - **Debug Mode**: `--debug` flag enables multi-terminal development mode
@@ -149,7 +149,7 @@ python main.py --mode eeg_only --headless --duration 300
   - Perfect P300 generation when target squares flash
   - Configurable noise levels and P300 parameters
   - Standalone mode for pure EEG streaming
-  - Integration with system orchestrator
+  - Integration with main application
 - **Terminal Mode**: Shows real-time streaming status and P300 generation
 - **LSL Streams**:
   - **Outputs**: `SimulatedEEG`, `P300Response`
@@ -177,7 +177,7 @@ python main.py --mode eeg_only --headless --duration 300
   - Real-time processing with designed low latency
   - Bandpass filtering and baseline correction
   - Configurable detection parameters
-  - Integration with orchestrator testing
+  - Integration with main application testing
 - **Terminal Mode**: Shows real-time P300 detections with confidence scores
 - **LSL Streams**:
   - **Inputs**: `SimulatedEEG` or `ProcessedEEG`, `ChessFlash`
@@ -195,7 +195,7 @@ python main.py --mode eeg_only --headless --duration 300
   - Game state management
   - LSL communication for move intentions
   - **Terminal Mode**: Show game state, move analysis, AI thinking
-  - **Orchestrator Integration**: Automatic startup and health monitoring
+  - **Main Application Integration**: Automatic startup and health monitoring
 
 #### `chess_board.py` - **PLANNED**
 - **Purpose**: Chess board representation and logic
@@ -215,7 +215,7 @@ python main.py --mode eeg_only --headless --duration 300
   - LSL marker synchronization
   - Visual feedback for selections
   - **Terminal Mode**: Show flashing statistics and timing metrics
-  - **Orchestrator Integration**: GUI component status monitoring
+  - **Main Application Integration**: GUI component status monitoring
 
 ## ✅ **Configuration System (`config/`) - COMPLETED**
 
@@ -226,15 +226,15 @@ python main.py --mode eeg_only --headless --duration 300
   - Environment variable overrides
   - Type-safe configuration objects
   - Runtime configuration reloading via `reload` command
-  - Integration with orchestrator
+  - Integration with main application
 
 ### `config.yaml` - **COMPREHENSIVE**
-Comprehensive configuration covering all system parameters with orchestrator integration.
+Comprehensive configuration covering all system parameters with main application integration.
 
 ## Development Workflow
 
 ### ✅ **Phase 1: Core Infrastructure (COMPLETED)**
-1. **✅ System orchestrator** - Professional component management
+1. **✅ Main application** - Component management with multi-terminal support
 2. **✅ Multi-terminal debug mode** - Development-friendly interface
 3. **✅ EEG signal simulation** - Realistic brain signals with P300
 4. **✅ Real EEG hardware support** - Device discovery and streaming
@@ -252,17 +252,17 @@ Comprehensive configuration covering all system parameters with orchestrator int
 1. **Chess engine integration** - AI opponent with configurable difficulty
 2. **Visual interface** - Square flashing and board display with terminal monitoring
 3. **Move selection pipeline** - P300 → chess move execution
-4. **Complete orchestration** - Full system integration with all components
+4. **Complete integration** - Full system with all components
 
 ### 📋 **Phase 4: Enhancement (FUTURE)**
-1. **User calibration** - Personalized P300 detection with orchestrator support
+1. **User calibration** - Personalized P300 detection with main application support
 2. **Performance monitoring** - Real-time analytics dashboard
 3. **Multi-player support** - P300 vs P300 chess matches
-4. **Research tools** - Data collection and analysis with orchestrator coordination
+4. **Research tools** - Data collection and analysis with main application coordination
 
 ## Enhanced Testing Strategy
 
-### ✅ **Orchestrator-Integrated Testing**
+### ✅ **Main Application-Integrated Testing**
 
 #### **Built-in Test Commands**
 ```bash
@@ -312,7 +312,7 @@ py300chess> status
 - 📈 **Performance monitoring** - Resource usage per component
 - 🛑 **Clean shutdown** - All terminals close automatically
 
-### **Professional CLI Interface**
+### **Interactive CLI Interface**
 - 🎮 **Interactive commands** - Built-in system management
 - 🔄 **Hot configuration reload** - No restart needed for config changes
 - 🧪 **Integrated testing** - One-command pipeline validation
@@ -335,7 +335,7 @@ py300chess> status
 - **Component shutdown**: <5 seconds graceful termination ✅
 
 ### ✅ **Current Optimizations**
-- **Efficient orchestration**: Minimal overhead component management
+- **Efficient component management**: Minimal overhead
 - **Smart terminal handling**: Platform-specific optimization
 - **Resource monitoring**: Built-in performance tracking
 - **Graceful error handling**: Continues operation despite component failures
@@ -350,7 +350,7 @@ py300chess> status
 ## Architecture Benefits
 
 ### **Enhanced Modularity**
-- **Professional orchestration**: Proper component lifecycle management
+- **Professional component management**: Proper lifecycle management
 - **Debug-friendly**: Multi-terminal mode for development
 - **Production-ready**: Clean single-terminal mode for end users
 - **Cross-platform**: Windows, macOS, Linux support
@@ -371,7 +371,7 @@ py300chess> status
 
 ### **Complete Pipeline Validation**
 ```bash
-# Method 1: Orchestrator built-in testing
+# Method 1: Built-in testing
 python main.py --mode eeg_only --debug
 py300chess> test
 
@@ -395,7 +395,7 @@ python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessFlash'
 
 ## Future Extensions
 
-### **Enhanced Orchestration**
+### **Enhanced Main Application**
 - **Performance dashboard** - Real-time metrics visualization
 - **Component auto-restart** - Automatic recovery from failures
 - **Load balancing** - Distribute processing across multiple cores
@@ -415,9 +415,9 @@ python -c "import pylsl; outlet=pylsl.StreamOutlet(pylsl.StreamInfo('ChessFlash'
 
 ## Architecture Achievement Summary
 
-The py300chess system has evolved from individual components into a **professional BCI platform**:
+The py300chess system has evolved from individual components into a **well-structured BCI application**:
 
-✅ **System Orchestration**: Professional component lifecycle management  
+✅ **Component Management**: Professional lifecycle management  
 ✅ **Multi-Terminal Debugging**: Developer-friendly interface with real-time monitoring  
 ✅ **Interactive CLI**: Built-in commands for testing, monitoring, and configuration  
 ✅ **Cross-Platform Support**: Windows, macOS, Linux compatibility  

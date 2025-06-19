@@ -12,8 +12,6 @@ This application uses the P300 speller approach adapted for chess:
 
 ## Features
 
-- **Complete System Orchestrator**: Professional startup/shutdown with component management
-- **Multi-Terminal Debug Mode**: Each component runs in separate terminal for easy monitoring
 - **P300-based move selection**: Select chess pieces and destinations using EEG
 - **Real-time EEG processing**: Process LSL streams with configurable parameters
 - **Real-time P300 detection**: Advanced template matching and confidence scoring
@@ -21,6 +19,7 @@ This application uses the P300 speller approach adapted for chess:
 - **Visual feedback**: Real-time confidence indicators and system status *(coming soon)*
 - **Simulation mode**: Test without EEG hardware using simulated signals
 - **Flexible EEG setup**: Support for single or multi-channel configurations
+- **Debug mode**: Run components in separate terminals for easy monitoring
 - **Interactive CLI**: Built-in commands for testing, monitoring, and configuration
 
 ## Requirements
@@ -49,19 +48,19 @@ python main.py
 
 ## Quick Start
 
-### 🎮 **Complete System (Default)**
+### 🎮 **Basic Usage**
 
-The easiest way to start the system:
+The simplest way to start:
 
 ```bash
-# Clean single-terminal mode
+# Single terminal mode (clean interface)
 python main.py --mode eeg_only
 
-# Multi-terminal debug mode (recommended for development)
+# Debug mode with separate terminals for each component
 python main.py --mode eeg_only --debug
 ```
 
-### 🧠 **Interactive Control Interface**
+### 🧠 **Interactive Commands**
 
 Once started, you get an interactive CLI:
 
@@ -103,7 +102,7 @@ python main.py --mode eeg_only --debug
 Test your P300 detection pipeline:
 
 ```bash
-# Start system
+# Start system in debug mode
 python main.py --mode eeg_only --debug
 
 # In the CLI:
@@ -118,9 +117,9 @@ This automatically:
 
 ## System Architecture
 
-### **Professional Component Management**
+### **Component Management**
 
-The system uses a **professional orchestrator** that manages all components:
+The main.py file manages all components with these features:
 
 - **Automatic startup/shutdown**: Components start in correct order
 - **Health monitoring**: Real-time status of all components
@@ -128,7 +127,7 @@ The system uses a **professional orchestrator** that manages all components:
 - **Multi-terminal support**: Each component in separate terminal (debug mode)
 - **Clean CLI interface**: Interactive commands for system control
 
-### **Multi-Terminal Debug Mode**
+### **Debug Mode**
 
 When using `--debug`, components run in separate terminals:
 
@@ -154,7 +153,7 @@ EEG Hardware/Simulation → EEG Stream → LSL → P300 System
 
 ### Core Components
 
-- **`main.py`**: System orchestrator with multi-terminal support ✅
+- **`main.py`**: Component management with multi-terminal support ✅
 - **`signal_simulator.py`**: Generates realistic EEG with P300 responses ✅
 - **`lsl_stream.py`**: Handles real EEG hardware connections ✅
 - **`p300_detector.py`**: Detects P300 responses in EEG streams ✅
@@ -195,7 +194,7 @@ stimulus:
 ## Development Status
 
 ### ✅ **Completed**
-- **System Orchestrator**: Professional startup/shutdown with multi-terminal support
+- **Main application**: Component management with multi-terminal support
 - **EEG Signal Simulation**: Realistic brain signals with P300 responses
 - **LSL Streaming**: Continuous data streaming for both real and simulated EEG
 - **Real EEG Hardware**: Auto-discovery and connection to LSL-compatible devices
@@ -297,7 +296,7 @@ python -c "import pylsl; print([s.name() for s in pylsl.resolve_streams()])"
 
 ```
 py300chess/
-├── main.py                     # ✅ System orchestrator with multi-terminal support
+├── main.py                     # ✅ Main application with component management
 ├── config.yaml                 # ✅ Main configuration file
 ├── requirements.txt            # ✅ Python dependencies
 ├── src/
@@ -378,14 +377,14 @@ python main.py --mode eeg_only --debug
 
 1. **Fork the repository**
 2. **Create a feature branch**: `git checkout -b feature-name`
-3. **Test with the orchestrator**: `python main.py --mode eeg_only --debug`
+3. **Test with debug mode**: `python main.py --mode eeg_only --debug`
 4. **Add tests** for new functionality
 5. **Submit a pull request**
 
 ## Development Workflow
 
 ### Phase 1: Core Infrastructure ✅ **COMPLETED**
-- [x] System orchestrator with multi-terminal support
+- [x] Main application with multi-terminal support
 - [x] EEG signal simulation with P300 responses
 - [x] LSL streaming for real and simulated data
 - [x] Configuration system and interactive interface
@@ -412,7 +411,7 @@ python main.py --mode eeg_only --debug
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Ideas for future Enhancements
+## Ideas for Future Enhancements
 
 - **Advanced P300 Detection**: Machine learning-based classification
 - **Multi-Device Support**: Multiple EEG systems simultaneously  

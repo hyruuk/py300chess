@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-py300chess - Main System Orchestrator
+py300chess - Main Application
 
 This is the primary entry point for the py300chess system. It manages the 
 lifecycle of all components and provides different operating modes for 
@@ -44,9 +44,9 @@ except ImportError:
     CHESS_GUI_AVAILABLE = False
 
 
-class SystemOrchestrator:
+class Py300ChessApp:
     """
-    Main system orchestrator for py300chess.
+    Main application for py300chess.
     
     Manages component lifecycle, monitors system health, and provides
     clean startup/shutdown procedures. Can spawn components in separate
@@ -54,7 +54,7 @@ class SystemOrchestrator:
     """
     
     def __init__(self, config, use_separate_terminals: bool = False):
-        """Initialize the system orchestrator."""
+        """Initialize the application."""
         self.config = config
         self.use_separate_terminals = use_separate_terminals
         self.logger = logging.getLogger(__name__)
@@ -802,18 +802,6 @@ class SystemOrchestrator:
                 status = "running" if process.poll() is None else "stopped"
                 self.logger.info(f"  {comp_name}: PID {process.pid} ({status})")
         
-        if component and hasattr(component, 'get_status'):
-            try:
-                status = component.get_status()
-                self.logger.info(f"\n{component_name}:")
-                for key, value in status.items():
-                    self.logger.info(f"  {key}: {value}")
-            except Exception as e:
-                self.logger.error(f"  Error getting {component_name} status: {e}")
-        else:
-            status = self.component_status.get(component_name.lower().replace(' ', '_'), 'not_started')
-            self.logger.info(f"\n{component_name}: {status}")
-        
         self.logger.info("="*50)
     
     def _show_configuration(self):
@@ -1095,19 +1083,19 @@ EXAMPLES:
             logger.info("✅ Configuration valid")
             return 0
         
-        # Create and start system orchestrator
-        orchestrator = SystemOrchestrator(config, use_separate_terminals=args.debug)
+        # Create and start application
+        app = Py300ChessApp(config, use_separate_terminals=args.debug)
         
         # Start system
-        if not orchestrator.start_system(mode=args.mode):
+        if not app.start_system(mode=args.mode):
             logger.error("Failed to start system")
             return 1
         
         # Run in appropriate mode
         if args.headless:
-            orchestrator.run_headless(duration=args.duration)
+            app.run_headless(duration=args.duration)
         else:
-            orchestrator.run_interactive()
+            app.run_interactive()
         
         return 0
     
