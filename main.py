@@ -43,6 +43,13 @@ try:
 except ImportError:
     CHESS_GUI_AVAILABLE = False
 
+# Import EEG visualizer
+try:
+    from src.gui.eeg_visualizer import EEGVisualizer
+    EEG_VISUALIZER_AVAILABLE = True
+except ImportError:
+    EEG_VISUALIZER_AVAILABLE = False
+
 
 class Py300ChessApp:
     """
@@ -64,10 +71,12 @@ class Py300ChessApp:
         self.p300_detector = None
         self.chess_engine = None
         self.chess_gui = None
+        self.eeg_visualizer = None
         
         # Component processes (for separate terminal mode)
         self.component_processes = {}
         self.terminal_processes = {}
+        self.terminal_pids = {}  # Track terminal window PIDs for cleanup
         
         # System state
         self.is_running = False
@@ -151,11 +160,15 @@ class Py300ChessApp:
         if not self._start_p300_detector():
             return False
         
-        # 3. Start chess engine
+        # 3. Start EEG visualization (debug mode only)
+        if self.use_separate_terminals and not self._start_eeg_visualizer():
+            self.logger.warning("⚠️ EEG visualizer failed to start (continuing without visualization)")
+        
+        # 4. Start chess engine
         if not self._start_chess_engine():
             return False
         
-        # 4. Start chess GUI
+        # 5. Start chess GUI
         if not self._start_chess_gui():
             return False
         
@@ -173,6 +186,10 @@ class Py300ChessApp:
         # 2. Start P300 detection
         if not self._start_p300_detector():
             return False
+        
+        # 3. Start EEG visualization (debug mode only)
+        if self.use_separate_terminals and not self._start_eeg_visualizer():
+            self.logger.warning("⚠️ EEG visualizer failed to start (continuing without visualization)")
         
         self.logger.info("🧠 EEG pipeline ready!")
         return True
@@ -350,6 +367,58 @@ class Py300ChessApp:
         self.logger.info("✅ P300 detector started successfully")
         return True
     
+    def _start_eeg_visualizer(self) -> bool:
+        """Start EEG visualization component."""
+        if not EEG_VISUALIZER_AVAILABLE:
+            self.logger.warning("⚠️ EEG visualizer not available (missing dependencies)")
+            self.component_status["eeg_visualizer"] = "not_available"
+            return True  # Don't fail if visualizer isn't available
+        
+        try:
+            if self.use_separate_terminals:
+                return self._start_eeg_visualizer_in_terminal()
+            else:
+                return self._start_eeg_visualizer_in_process()
+        except Exception as e:
+            self.logger.error(f"❌ Failed to start EEG visualizer: {e}")
+            return False
+    
+    def _start_eeg_visualizer_in_terminal(self) -> bool:
+        """Start EEG visualizer in separate terminal."""
+        self.logger.info("📊 Starting EEG visualizer in new terminal...")
+        script_path = project_root / "src" / "gui" / "eeg_visualizer.py"
+        terminal_title = "py300chess - EEG Visualizer"
+        
+        # Add visualization parameters
+        cmd_args = [str(script_path)]
+        if self.config.feedback.debug_mode:
+            cmd_args.extend(["--time-window", "10.0", "--y-scale", "50.0"])
+        
+        process = self._spawn_terminal(cmd_args, terminal_title, "eeg_visualizer")
+        if process:
+            self.component_processes["eeg_visualizer"] = process
+            self.components_started.append("eeg_visualizer")
+            self.component_status["eeg_visualizer"] = "running (terminal)"
+        else:
+            return False
+        
+        # Give visualizer time to initialize
+        self.logger.info("⏳ Waiting for EEG visualizer to initialize...")
+        time.sleep(2.0)
+        
+        self.logger.info("✅ EEG visualizer started successfully")
+        return True
+    
+    def _start_eeg_visualizer_in_process(self) -> bool:
+        """Start EEG visualizer in same process (not recommended)."""
+        self.logger.warning("⚠️ EEG visualizer in same process not recommended (blocks UI)")
+        self.logger.info("📊 Starting EEG visualizer...")
+        
+        # Note: This would block the main thread, so we skip it
+        # In single-terminal mode, users can run visualizer manually if needed
+        self.component_status["eeg_visualizer"] = "skipped (single_terminal_mode)"
+        return True
+    
     def _start_chess_engine(self) -> bool:
         """Start chess engine component."""
         if not CHESS_ENGINE_AVAILABLE:
@@ -458,63 +527,125 @@ class Py300ChessApp:
             python_cmd = [python_executable] + command_args
             
             if system == "windows":
-                # Windows - use cmd with start
+                # Windows - use cmd with start, track window process
+                # Use /WAIT to keep the cmd window open and trackable
                 cmd = ["cmd", "/c", "start", f'"{title}"', "cmd", "/k"] + python_cmd
                 
+                # Start the process
+                process = subprocess.Popen(cmd, 
+                                         stdout=subprocess.DEVNULL, 
+                                         stderr=subprocess.DEVNULL,
+                                         stdin=subprocess.DEVNULL,
+                                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                
+                # For Windows, we'll track by process name and title
+                self.terminal_pids[component_name] = {
+                    'process': process,
+                    'title': title,
+                    'system': 'windows'
+                }
+                
             elif system == "darwin":  # macOS
-                # macOS - use osascript to open Terminal
+                # macOS - use osascript to open Terminal and get window ID
                 script = f'''
                 tell application "Terminal"
-                    do script "{' '.join([python_executable] + command_args)}"
-                    set custom title of front window to "{title}"
+                    set newWindow to do script "{' '.join([python_executable] + command_args)}"
+                    set custom title of newWindow to "{title}"
                     activate
+                    return id of newWindow
                 end tell
                 '''
-                cmd = ["osascript", "-e", script]
+                
+                # Execute osascript and capture window ID
+                process = subprocess.Popen(["osascript", "-e", script], 
+                                         stdout=subprocess.PIPE, 
+                                         stderr=subprocess.PIPE,
+                                         text=True)
+                stdout, stderr = process.communicate()
+                
+                if process.returncode == 0:
+                    try:
+                        window_id = stdout.strip()
+                        self.terminal_pids[component_name] = {
+                            'window_id': window_id,
+                            'title': title,
+                            'system': 'darwin'
+                        }
+                        self.logger.debug(f"macOS Terminal window ID: {window_id}")
+                    except:
+                        self.logger.warning(f"Could not parse Terminal window ID: {stdout}")
+                        self.terminal_pids[component_name] = {
+                            'title': title,
+                            'system': 'darwin'
+                        }
+                else:
+                    self.logger.warning(f"osascript error: {stderr}")
                 
             else:  # Linux and other Unix-like systems
                 # Try different terminal emulators in order of preference
                 terminals = [
-                    # GNOME Terminal
-                    ["gnome-terminal", "--title", title, "--", python_executable] + command_args,
-                    # Konsole (KDE)
-                    ["konsole", "--title", title, "-e", python_executable] + command_args,
-                    # xterm (fallback)
-                    ["xterm", "-title", title, "-e", python_executable] + command_args,
+                    # GNOME Terminal - supports --wait to track process
+                    {
+                        'cmd': ["gnome-terminal", "--title", title, "--wait", "--", python_executable] + command_args,
+                        'name': 'gnome-terminal'
+                    },
+                    # Konsole (KDE) - supports --hold to keep window open
+                    {
+                        'cmd': ["konsole", "--title", title, "--hold", "-e", python_executable] + command_args,
+                        'name': 'konsole'
+                    },
+                    # xterm (fallback) - supports -hold
+                    {
+                        'cmd': ["xterm", "-title", title, "-hold", "-e", python_executable] + command_args,
+                        'name': 'xterm'
+                    },
                     # Alacritty
-                    ["alacritty", "--title", title, "-e", python_executable] + command_args,
+                    {
+                        'cmd': ["alacritty", "--title", title, "-e", python_executable] + command_args,
+                        'name': 'alacritty'
+                    },
                     # Terminator
-                    ["terminator", "--title", title, "-e", f"{python_executable} {' '.join(command_args)}"],
+                    {
+                        'cmd': ["terminator", "--title", title, "-e", f"{python_executable} {' '.join(command_args)}"],
+                        'name': 'terminator'
+                    },
                 ]
                 
-                cmd = None
-                for terminal_cmd in terminals:
+                terminal_info = None
+                for terminal in terminals:
                     try:
                         # Check if terminal is available
-                        subprocess.run([terminal_cmd[0], "--version"], 
+                        subprocess.run([terminal['cmd'][0], "--version"], 
                                      capture_output=True, timeout=2)
-                        cmd = terminal_cmd
+                        terminal_info = terminal
                         break
                     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
                         continue
                 
-                if cmd is None:
+                if terminal_info is None:
                     self.logger.error(f"❌ No suitable terminal found for {component_name}")
                     return None
-            
-            # Start the process
-            if system == "darwin":
-                # For macOS, we need to handle the osascript differently
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            else:
-                process = subprocess.Popen(cmd, 
+                
+                # Start the terminal process
+                process = subprocess.Popen(terminal_info['cmd'], 
                                          stdout=subprocess.DEVNULL, 
                                          stderr=subprocess.DEVNULL,
                                          stdin=subprocess.DEVNULL)
+                
+                # Track terminal process
+                self.terminal_pids[component_name] = {
+                    'process': process,
+                    'title': title,
+                    'terminal_name': terminal_info['name'],
+                    'system': 'linux'
+                }
             
-            self.terminal_processes[component_name] = process
+            # Also track in the original way for component management
+            if system != "darwin":  # For macOS, we don't have a persistent process
+                self.terminal_processes[component_name] = process
+            
             self.logger.info(f"✅ Spawned {component_name} in new terminal: {title}")
-            return process
+            return process if system != "darwin" else subprocess.Popen(['true'])  # Dummy process for macOS
             
         except Exception as e:
             self.logger.error(f"❌ Failed to spawn terminal for {component_name}: {e}")
@@ -575,39 +706,34 @@ class Py300ChessApp:
         self.logger.info("🛑 Shutting down py300chess system...")
         
         if self.use_separate_terminals:
-            # Terminate spawned processes
+            # First, terminate the Python processes
             for component_name, process in self.component_processes.items():
                 try:
-                    self.logger.info(f"Stopping {component_name} (PID: {process.pid})...")
+                    self.logger.info(f"Stopping {component_name} process (PID: {process.pid})...")
                     process.terminate()
                     
                     # Give process time to shut down gracefully
                     try:
-                        process.wait(timeout=5.0)
-                        self.logger.info(f"✅ {component_name} stopped gracefully")
+                        process.wait(timeout=3.0)
+                        self.logger.info(f"✅ {component_name} process stopped gracefully")
                     except subprocess.TimeoutExpired:
-                        self.logger.warning(f"⚠️ {component_name} didn't stop gracefully, forcing...")
+                        self.logger.warning(f"⚠️ {component_name} process didn't stop gracefully, forcing...")
                         process.kill()
                         process.wait()
-                        self.logger.info(f"✅ {component_name} stopped (forced)")
+                        self.logger.info(f"✅ {component_name} process stopped (forced)")
                         
                 except Exception as e:
-                    self.logger.error(f"❌ Error stopping {component_name}: {e}")
+                    self.logger.error(f"❌ Error stopping {component_name} process: {e}")
             
-            # Clean up terminal processes
-            for component_name, process in self.terminal_processes.items():
-                try:
-                    if process.poll() is None:  # Still running
-                        process.terminate()
-                        process.wait(timeout=2.0)
-                except:
-                    pass
+            # Then, close the terminal windows
+            self._close_terminal_windows()
         
         else:
             # Stop components in reverse order (original method)
             components_to_stop = [
                 ("chess_gui", self.chess_gui),
                 ("chess_engine", self.chess_engine),
+                ("eeg_visualizer", self.eeg_visualizer),
                 ("p300_detector", self.p300_detector),
                 ("eeg_streamer", self.eeg_streamer)
             ]
@@ -629,9 +755,119 @@ class Py300ChessApp:
             self.logger.info(f"📊 Session duration: {runtime:.1f} seconds")
             self.logger.info(f"📊 Components started: {', '.join(self.components_started)}")
             if self.use_separate_terminals:
-                self.logger.info(f"📊 Terminal mode: {len(self.component_processes)} separate terminals")
+                self.logger.info(f"📊 Terminal mode: {len(self.component_processes)} separate terminals closed")
         
         self.logger.info("✅ py300chess system shutdown complete")
+    
+    def _close_terminal_windows(self):
+        """Close spawned terminal windows across different platforms."""
+        self.logger.info("🪟 Closing terminal windows...")
+        
+        for component_name, terminal_info in self.terminal_pids.items():
+            try:
+                system = terminal_info['system']
+                
+                if system == 'windows':
+                    # Windows: Kill cmd windows by title
+                    self._close_windows_terminal(component_name, terminal_info)
+                    
+                elif system == 'darwin':
+                    # macOS: Close Terminal windows
+                    self._close_macos_terminal(component_name, terminal_info)
+                    
+                elif system == 'linux':
+                    # Linux: Close terminal processes
+                    self._close_linux_terminal(component_name, terminal_info)
+                
+            except Exception as e:
+                self.logger.warning(f"⚠️ Error closing terminal for {component_name}: {e}")
+        
+        # Clear tracking dictionaries
+        self.terminal_pids.clear()
+        self.terminal_processes.clear()
+    
+    def _close_windows_terminal(self, component_name: str, terminal_info: Dict):
+        """Close Windows terminal windows."""
+        try:
+            title = terminal_info['title']
+            
+            # Use taskkill to close windows with specific title
+            # First try graceful close
+            subprocess.run([
+                'taskkill', '/F', '/FI', f'WINDOWTITLE:*{title}*'
+            ], capture_output=True, timeout=5.0)
+            
+            self.logger.info(f"✅ Closed Windows terminal: {component_name}")
+            
+        except Exception as e:
+            self.logger.warning(f"⚠️ Could not close Windows terminal {component_name}: {e}")
+    
+    def _close_macos_terminal(self, component_name: str, terminal_info: Dict):
+        """Close macOS Terminal windows."""
+        try:
+            if 'window_id' in terminal_info:
+                # Close specific window by ID
+                window_id = terminal_info['window_id']
+                script = f'''
+                tell application "Terminal"
+                    close window id {window_id}
+                end tell
+                '''
+            else:
+                # Fallback: close windows by title
+                title = terminal_info['title']
+                script = f'''
+                tell application "Terminal"
+                    repeat with w in windows
+                        if custom title of w contains "{title}" then
+                            close w
+                        end if
+                    end repeat
+                end tell
+                '''
+            
+            subprocess.run(['osascript', '-e', script], 
+                         capture_output=True, timeout=5.0)
+            
+            self.logger.info(f"✅ Closed macOS Terminal: {component_name}")
+            
+        except Exception as e:
+            self.logger.warning(f"⚠️ Could not close macOS Terminal {component_name}: {e}")
+    
+    def _close_linux_terminal(self, component_name: str, terminal_info: Dict):
+        """Close Linux terminal windows."""
+        try:
+            if 'process' in terminal_info:
+                process = terminal_info['process']
+                
+                # Try graceful termination first
+                if process.poll() is None:  # Still running
+                    process.terminate()
+                    
+                    try:
+                        process.wait(timeout=3.0)
+                        self.logger.info(f"✅ Closed Linux terminal gracefully: {component_name}")
+                    except subprocess.TimeoutExpired:
+                        # Force kill if needed
+                        process.kill()
+                        process.wait()
+                        self.logger.info(f"✅ Closed Linux terminal (forced): {component_name}")
+                else:
+                    self.logger.info(f"✅ Linux terminal already closed: {component_name}")
+            else:
+                # Fallback: try to find and kill by title
+                terminal_name = terminal_info.get('terminal_name', 'unknown')
+                title = terminal_info['title']
+                
+                # Try pkill with pattern matching
+                subprocess.run([
+                    'pkill', '-f', f'{terminal_name}.*{title}'
+                ], capture_output=True, timeout=3.0)
+                
+                self.logger.info(f"✅ Attempted to close Linux terminal: {component_name}")
+                
+        except Exception as e:
+            self.logger.warning(f"⚠️ Could not close Linux terminal {component_name}: {e}")
     
     def run_interactive(self):
         """Run system with interactive status monitoring."""
@@ -752,6 +988,7 @@ class Py300ChessApp:
         for component_name, component in [
             ("EEG Source", self.eeg_streamer),
             ("P300 Detector", self.p300_detector),
+            ("EEG Visualizer", self.eeg_visualizer),
             ("Chess Engine", self.chess_engine),
             ("Chess GUI", self.chess_gui)
         ]:
@@ -925,6 +1162,8 @@ class Py300ChessApp:
                 self.logger.info(f"✅ {component.replace('_', ' ').title()}")
             elif status == "not_available":
                 self.logger.info(f"⚠️ {component.replace('_', ' ').title()} (not implemented)")
+            elif status == "skipped (single_terminal_mode)":
+                self.logger.info(f"⏭️ {component.replace('_', ' ').title()} (skipped in single-terminal mode)")
             else:
                 self.logger.info(f"📊 {component.replace('_', ' ').title()}: {status}")
         
@@ -1003,10 +1242,10 @@ OPERATING MODES:
 EXAMPLES:
   python main.py                    # Clean single-terminal mode
   python main.py --mode eeg_only    # EEG pipeline in single terminal
-  python main.py --debug           # Multi-terminal debug mode
-  python main.py --mode simulation --debug  # Debug with simulated EEG
+  python main.py --debug           # Multi-terminal debug mode with EEG visualization
+  python main.py --mode simulation --debug  # Debug with simulated EEG + visualization
   python main.py --headless --duration 300  # Run for 5 minutes
-  python main.py --debug --log-file session.log  # Debug with file logging
+  python main.py --debug --log-file session.log  # Debug with file logging + visualization
         """
     )
     
@@ -1042,7 +1281,7 @@ EXAMPLES:
     parser.add_argument(
         '--debug',
         action='store_true',
-        help='Enable debug logging and multi-terminal mode'
+        help='Enable debug logging, multi-terminal mode, and EEG visualization'
     )
     
     parser.add_argument(
