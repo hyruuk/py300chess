@@ -1,2 +1,13 @@
 .aider*
 env/
+
+*.pyc
+__pycache__/
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints
+# Ignore Jupyter Notebook files
+*.ipynb
+# Ignore Python egg files
+*.egg
+# Ignore Python distribution files
+*.egg-info/
