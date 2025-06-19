@@ -1,13 +1,44 @@
 .aider*
 env/
 
-
+# Python cache and compiled files
 __pycache__/
-# Ignore Jupyter Notebook checkpoints
+*.py[cod]
+*$py.class
+*.so
+
+# Python environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
 .ipynb_checkpoints
-# Ignore Jupyter Notebook files
 *.ipynb
-# Ignore Python egg files
+
+# Python packaging
 *.egg
-# Ignore Python distribution files
 *.egg-info/
+dist/
+build/
+*.whl
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/raw/*.csv
+data/processed/*.h5
+*.log
